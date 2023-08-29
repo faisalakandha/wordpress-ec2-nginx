@@ -42,3 +42,37 @@ echo "Created $config_file in $sites_available_dir"
 
 #Check nginx status
 sudo nginx -t
+
+# Load variables from the .env file
+if [ -f .env ]; then
+  source .env
+else
+  echo "Please create a .env file with MYSQL_ROOT_PASSWORD variable."
+  exit 1
+fi
+
+# Check if MYSQL_ROOT_PASSWORD is provided
+if [ -z "$MYSQL_ROOT_PASSWORD" ]; then
+  echo "MYSQL_ROOT_PASSWORD not found in .env file!"
+  exit 1
+fi
+
+# Prepare SQL commands
+SQL_COMMANDS=$(cat << EOF
+UPDATE mysql.user SET Password=PASSWORD('$MYSQL_ROOT_PASSWORD') WHERE User='root';
+DELETE FROM mysql.user WHERE User='';
+DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+DROP DATABASE IF EXISTS test;
+DELETE FROM mysql.db WHERE Db='test' OR Db='test\_%';
+FLUSH PRIVILEGES;
+EOF
+)
+
+# Execute SQL commands using MySQL CLI
+mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "$SQL_COMMANDS"
+
+echo "MySQL installation secured!"
+
+#Enable MySQL
+systemctl start mysql
+systemctl enable mysql
