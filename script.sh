@@ -64,7 +64,7 @@ EOF
 )
 
 # Execute SQL commands using MySQL CLI
-mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "$SQL_COMMANDS"
+echo "$SQL_COMMANDS" | mysql -u root -p"$MYSQL_ROOT_PASSWORD"
 
 echo "MySQL installation secured!"
 
