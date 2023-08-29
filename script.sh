@@ -43,11 +43,6 @@ echo "Created $config_file in $sites_available_dir"
 #Check nginx status
 sudo nginx -t
 
-# Execute SQL commands using MySQL CLI
-echo "$SQL_COMMANDS" | mysql -u root -p
-
-echo "MySQL installation secured!"
-
 #Enable MySQL
 systemctl start mysql
 systemctl enable mysql
