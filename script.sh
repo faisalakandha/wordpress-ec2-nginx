@@ -43,13 +43,8 @@
 # #Check nginx status
 # sudo nginx -t
 
-# Load variables from the .env file
-if [ -f .env ]; then
-  source .env
-else
-  echo "Please create a .env file with MYSQL_ROOT_PASSWORD variable."
-  exit 1
-fi
+# Load MYSQL_ROOT_PASSWORD from the .env file
+MYSQL_ROOT_PASSWORD=$(grep -oP 'MYSQL_ROOT_PASSWORD=\K.*' .env)
 
 # Check if MYSQL_ROOT_PASSWORD is provided
 if [ -z "$MYSQL_ROOT_PASSWORD" ]; then
@@ -72,6 +67,7 @@ EOF
 mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "$SQL_COMMANDS"
 
 echo "MySQL installation secured!"
+
 
 #Enable MySQL
 systemctl start mysql
