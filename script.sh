@@ -1,69 +1,77 @@
 #!/bin/bash
 
-# Update system packages
+# Load environment variables from .env file
+if [ -f .env ]; then
+  source .env
+else
+  echo "Error: .env file not found."
+  exit 1
+fi
+
+# Update and install required packages
 sudo apt update
-sudo apt upgrade -y
-
-# Install Nginx
-sudo apt install nginx -y
-
-# Start Nginx
-sudo systemctl start nginx
-sudo systemctl enable nginx
-
-# Install MySQL
-sudo apt install mysql-server -y
-
-# Secure MySQL installation
-sudo mysql_secure_installation
-
-# Install PHP and required extensions
-sudo apt install php-fpm php-mysql php-curl php-gd php-mbstring php-xml php-xmlrpc php-soap php-intl php-zip -y
-
-# Configure PHP-FPM
-sudo systemctl start php7.4-fpm
-sudo systemctl enable php7.4-fpm
-
-# Create a database for WordPress
-sudo mysql -u root -p -e "CREATE DATABASE wordpress;"
-sudo mysql -u root -p -e "CREATE USER 'wpuser'@'localhost' IDENTIFIED BY 'wppassword';"
-sudo mysql -u root -p -e "GRANT ALL PRIVILEGES ON wordpress.* TO 'wpuser'@'localhost';"
-sudo mysql -u root -p -e "FLUSH PRIVILEGES;"
+sudo apt install -y software-properties-common
+sudo add-apt-repository -y ppa:ondrej/php
+sudo apt update
+sudo apt install -y php7.4 nginx mariadb-server php7.4-fpm php7.4-mysql
 
 # Download and configure WordPress
-sudo mkdir /var/www/html/wordpress
-cd /var/www/html/wordpress
+sudo mkdir -p /var/www
+cd /var/www
 sudo wget https://wordpress.org/latest.tar.gz
 sudo tar -xzvf latest.tar.gz
-sudo cp -r wordpress/* .
-sudo rm -rf wordpress latest.tar.gz
-sudo chown -R www-data:www-data /var/www/html/wordpress
+sudo rm latest.tar.gz
+sudo chown -R www-data:www-data wordpress
+sudo find wordpress/ -type d -exec chmod 755 {} \;
+sudo find wordpress/ -type f -exec chmod 644 {} \;
 
-# Create Nginx virtual host configuration for WordPress
-sudo tee /etc/nginx/sites-available/wordpress <<EOF
+# Secure MySQL installation and create WordPress database
+echo "Configuring MySQL..."
+sudo mysql_secure_installation
+sudo mysql -u root -p <<MYSQL_SCRIPT
+CREATE DATABASE $DB_NAME default character set utf8 collate utf8_unicode_ci;
+CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASSWORD';
+GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+MYSQL_SCRIPT
+
+# Create Nginx config for WordPress
+echo "Configuring Nginx..."
+cat <<EOF | sudo tee /etc/nginx/sites-available/wordpress.conf > /dev/null
+upstream php-handler {
+    server unix:/var/run/php/php7.4-fpm.sock;
+}
 server {
     listen 80;
-    server_name speckbridge.com www.speckbridge.com;
-    root /var/www/html/wordpress;
+    server_name $DOMAIN_NAME;
+    root /var/www/wordpress;
     index index.php;
-
     location / {
         try_files \$uri \$uri/ /index.php?\$args;
     }
-
     location ~ \.php$ {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/var/run/php/php7.4-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        fastcgi_pass php-handler;
     }
 }
 EOF
 
-# Enable the Nginx virtual host configuration
-sudo ln -s /etc/nginx/sites-available/wordpress /etc/nginx/sites-enabled/
-
-# Test Nginx configuration and reload
+# Enable Nginx site and test configuration
+sudo ln -s /etc/nginx/sites-available/wordpress.conf /etc/nginx/sites-enabled/
 sudo nginx -t
-sudo systemctl reload nginx
+sudo systemctl restart nginx
 
-echo "WordPress installation completed!"
+# Install additional PHP extensions
+sudo apt install -y php7.4-curl php7.4-dom php7.4-mbstring php7.4-imagick php7.4-zip php7.4-gd
+
+# Install Certbot for SSL
+sudo apt install -y snapd
+sudo snap install core; snap refresh core
+sudo snap install --classic certbot
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
+
+# Configure SSL certificate
+sudo certbot --nginx
+
+echo "WordPress installation completed successfully!"
