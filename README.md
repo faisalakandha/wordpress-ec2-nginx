@@ -9,3 +9,4 @@ Helpful Notes:
 ### Go to /etc/nginx/nginx.conf 
 in the http block paste the following: client_max_body_size 100M;
 
+/var/www$ sudo scp -i master-hosting.pem mohakhali.tar.gz ubuntu@3.108.26.97:/home/backups/
