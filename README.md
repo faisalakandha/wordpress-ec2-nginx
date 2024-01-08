@@ -18,3 +18,5 @@ sudo lsof -t -i:3000
 tar -czvf file.tar.gz directory
 
 chmod 400 ~/.ssh/ec2private.pem
+
+scp -i pk_dsa.pem linuxhintsignal kali@192.168.1.100:
