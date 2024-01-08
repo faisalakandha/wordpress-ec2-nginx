@@ -10,3 +10,11 @@ Helpful Notes:
 in the http block paste the following: client_max_body_size 100M;
 
 /var/www$ sudo scp -i master-hosting.pem mohakhali.tar.gz ubuntu@3.108.26.97:/home/backups/
+
+mysql -p -u [user] [database] < backup-file.sql
+
+sudo lsof -t -i:3000
+
+tar -czvf file.tar.gz directory
+
+chmod 400 ~/.ssh/ec2private.pem
